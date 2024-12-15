@@ -10,6 +10,7 @@
 <body class="bg-light d-flex flex-column align-items-center justify-content-center vh-100">
   <div class="container text-center">
     <h1 class="text-primary mb-4">Photo AI by Gaurav GV</h1>
+    <h4 class="text-secondary mb-4">Based on Phot.AI</h4>
     <div class="card shadow p-4" style="max-width: 400px; margin: auto;">
       <form id="photoEditForm">
         <!-- Source Image URL Input -->
@@ -19,7 +20,7 @@
         </div>
 
         <div class="mb-3">
-            <label for="apiKey" class="form-label">API Key <a href="https://google.com">Get API key from here</a></label>
+            <label for="apiKey" class="form-label">API Key <a target="_blank" href="https://api.phot.ai/auth">Get API key from here</a></label>
             <input type="text" class="form-control" id="apiKey" name="apiKey" required placeholder="Enter api key">
           </div>
 
@@ -32,7 +33,14 @@
         </div>
 
         <!-- Submit Button -->
-        <button type="submit" class="btn btn-primary w-100">Submit</button>
+        <button type="submit" id="submitBtn" class="btn btn-primary w-100 position-relative d-flex justify-content-center align-items-center">
+          <span id="submitBtnText">Submit</span>
+          <div id="submitProgress" class="position-absolute d-none">
+            <div class="spinner-border text-light" role="status" style="width: 1.5rem; height: 1.5rem;">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </button>
       </form>
     </div>
 
@@ -67,12 +75,23 @@
       }
     }
 
+    // Function to convert URLs to clickable hyperlinks
+    function linkify(text) {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      return text.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank">${url}</a>`;
+      });
+    }
+
     document.getElementById('photoEditForm').addEventListener('submit', async function (e) {
       e.preventDefault(); // Prevent default form submission
 
       const sourceImage = document.getElementById('sourceImage').value;
       const apiKey = document.getElementById('apiKey').value;
       const toolId = document.getElementById('toolId').value;
+      const submitBtn = document.getElementById('submitBtn');
+      const submitBtnText = document.getElementById('submitBtnText');
+      const submitProgress = document.getElementById('submitProgress');
 
       // Validate inputs
       if (!sourceImage || !toolId || !apiKey) {
@@ -80,35 +99,54 @@
         return;
       }
 
+      // Disable submit button and show progress
+      submitBtn.disabled = true;
+      submitBtnText.classList.add('invisible');
+      submitProgress.classList.remove('d-none');
+
       try {
-        // Make the POST request
-        const response = await fetch('/api/photo-edit', {
+        const response = await fetch('/api/edit-photo', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': apiKey
+            'x-api-key': apiKey,
           },
-          body: JSON.stringify({ sourceImage, toolId }),
+          body: JSON.stringify({
+            sourceImage,
+            toolId
+          })
         });
 
-        const data = await response.json();
+        // Hide progress and re-enable button
+        submitProgress.classList.add('d-none');
+        submitBtnText.classList.remove('invisible');
+        submitBtn.disabled = false;
 
-        // Display response
-        const responseDiv = document.getElementById('response');
-        responseDiv.classList.remove('d-none', 'alert-success', 'alert-danger');
-        if (response.ok) {
-          responseDiv.classList.add('alert-success');
-          responseDiv.textContent = `Success: ${JSON.stringify(data)}`;
-        } else {
-          responseDiv.classList.add('alert-danger');
-          responseDiv.textContent = `Error: ${JSON.stringify(data) || 'An unknown error occurred'}`;
+        if (!response.ok) {
+          throw new Error('Failed to process photo');
         }
+
+        const result = await response.json();
+        const responseDiv = document.getElementById('response');
+        
+        // Convert the result to a string and then linkify
+        const resultString = JSON.stringify(result, null, 2);
+        responseDiv.innerHTML = linkify(resultString);
+        
+        responseDiv.classList.remove('d-none', 'alert-danger');
+        responseDiv.classList.add('alert-success');
       } catch (error) {
         console.error('Error:', error);
+        
+        // Hide progress and re-enable button
+        submitProgress.classList.add('d-none');
+        submitBtnText.classList.remove('invisible');
+        submitBtn.disabled = false;
+
         const responseDiv = document.getElementById('response');
+        responseDiv.textContent = `Error: ${error.message}`;
         responseDiv.classList.remove('d-none', 'alert-success');
         responseDiv.classList.add('alert-danger');
-        responseDiv.textContent = `Failed to send request: ${error.message}`;
       }
     });
 

@@ -37,7 +37,7 @@ app.get("/api/get-tools", (req, res) => {
   res.send(tools);
 });
 
-app.post("/api/photo-edit", async (req, res) => {
+app.post("/api/edit-photo", async (req, res) => {
   const { sourceImage, toolId } = req.body;
 
   const apiKey = req.headers["x-api-key"];
