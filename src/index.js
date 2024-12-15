@@ -13,6 +13,7 @@ app.use(bodyParser.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicdir = "../public/";
+const assetsdir = `${publicdir}assets/`;
 
 const tools = [
   {
@@ -35,6 +36,10 @@ app.get("/", (req, res) => {
 
 app.get("/api/get-tools", (req, res) => {
   res.send(tools);
+});
+
+app.get("/assets/*", (req, res) => {
+  res.sendFile(path.join(__dirname, `${assetsdir}favicon.ico`));
 });
 
 app.post("/api/edit-photo", async (req, res) => {
